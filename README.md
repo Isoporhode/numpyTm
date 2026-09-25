@@ -1,2 +1,2 @@
 # numpyTm
-Tsetlin machine implementation with focus on numpy and boolean algebra
+Tsetlin machine implementation with focus on numpy and boolean algebra - In progress
