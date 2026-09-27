@@ -19,11 +19,10 @@ class NumpyTsetlinMachineR:
         self.s = s
         self.threshold = threshold
 
-        # clause shape er literals en retning, clauses en annen reting
         self.state_shape = [number_of_clauses, number_of_features * 2]
         self.state_size = number_of_clauses * number_of_features * 2
 
-        # negative is exluded literal, positive is included literal to the clause
+        # negative is exluded literal, positive is included literal to the clause (invert this for less calculations?)
         self.states = np.random.choice([-1, 0], size=self.state_size).reshape(
             self.state_shape
         )
@@ -49,14 +48,12 @@ class NumpyTsetlinMachineR:
 
     # probably slow
     def calculate_clauses_output(self, literals, clauses):
-        # will only give true, if the "clause & literals" output is true
         # tries to find matches where literal and clauses matches. If they do, all values are true for that clause
-        # print(clauses.shape, literals.shape)
         resloved = literals | ~clauses
         return np.all(
             resloved,
             axis=1,
-        )  # mulig denne ikke funker, sjekk den
+        )
 
     def sum_tar_select_pos(self, group_sum):
         prob_pos = (group_sum + self.threshold) / (2 * self.threshold)
@@ -102,7 +99,7 @@ class NumpyTsetlinMachineR:
         )  # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0
         self.rand_s_generator()
 
-        # reshape party - See if we can reduce this stuff to a minimum with broadcast
+        # a bunch of reshaping - See if we can reduce this stuff to a minimum with broadcast
         sum_tar_r = self.C_to_L_reshape(sum_tar)
         type_I_fb_sum_tar = self.C_to_L_reshape(feedback_type & sum_tar)
         clauses_evaluated_r = self.C_to_L_reshape(clauses_evaluated)
