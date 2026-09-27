@@ -18,12 +18,19 @@ The random variables in this repo is for the most part generated all at once. I.
 ### Reducing feedback table to boolean algebra
 
 When random variables are expressed as boolean variables, feedback I and II can also be described as boolean variables.
-Feedbakck type II is for example represented as something like (y ^ clause_sign) & ( y & sum_tar_neg | ~y & sum_tar_pos) & clause_evaluated & ~literal
-where (y ^ clause_sign) checks if the polarity of a clause any y is not the same so that type II feedback should be used, 
+Feedbakck type II is for example represented as something like:
 
-( y & sum_tar_neg | ~y & sum_tar_pos) is a multiplexer, where y is used to choose the signal. If y = 1, then sum_tar_neg is chosen. sum_tar_neg is a precalculated array of random variables from random()<(T-v)/(2T), where v is the evaluated som of positive and negatve clauses on the literal set.
+```python
+(y ^ clause_sign) & ( y & sum_tar_neg | ~y & sum_tar_pos) & clause_evaluated & ~literal
+```
 
-Anding with clause_evaluated is just of the clause evaluates to 1, and the same with inverted literal, as it is shown in the feedback type II table.
+Where ```(y ^ clause_sign)``` checks if the polarity of a clause any y is not the same so that type II feedback should be used,
+
+The section ```( y & sum_tar_neg | ~y & sum_tar_pos)``` is a multiplexer, where y is used to choose the signal. If y = 1, then sum_tar_neg is chosen.
+
+```sum_tar_neg``` is a precalculated array of random variables from ```random()<(T-v)/(2T)```, where v is the evaluated som of positive and negatve clauses on the literal set.
+
+Anding with ```clause_evaluated``` is just of the clause evaluates to 1, and the same with inverted ```literal```, as it is shown in the feedback type II table.
 
 From this punish only comes from type I feedback, while reward both comes from type I and II feedback and are combined with a simple or
 
