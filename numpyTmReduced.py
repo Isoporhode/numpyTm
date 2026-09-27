@@ -22,7 +22,8 @@ class NumpyTsetlinMachineR:
         self.state_shape = [number_of_clauses, number_of_features * 2]
         self.state_size = number_of_clauses * number_of_features * 2
 
-        # negative is exluded literal, positive is included literal to the clause (invert this for less calculations?)
+        # Negative is exluded literal, positive is included literal to the clause. Use msb to check what literal should be included and not.
+        # Turns out that this will give less calculation than the inverted version, check out calculate_clauses_output
         self.states = np.random.choice([-1, 0], size=self.state_size).reshape(
             self.state_shape
         )
@@ -36,17 +37,6 @@ class NumpyTsetlinMachineR:
         )
 
         self.rand_s_generator()
-
-    # perhaps we can remove these?
-    def C_to_L_reshape(self, arr):
-        one_test = np.ones(self.state_shape).T
-        combined = (one_test * arr).T > 0
-        return combined
-
-    def L_to_C_reshape(self, arr):
-        one_test = np.ones(self.state_shape)
-        combined = (one_test * arr) > 0
-        return combined
 
     # probably slow
     def calculate_clauses_output(self, literals):
@@ -64,8 +54,8 @@ class NumpyTsetlinMachineR:
 
     def rand_s_generator(self):
         s_inv = 1 / self.s
-        self.s_inv_l_F = (s_inv > np.random.rand(self.state_size)).reshape(
-            self.state_shape
+        self.s_inv_l_F = (
+            (s_inv > np.random.rand(self.state_size)).reshape(self.state_shape).T
         )
 
     def fit(self, X_all, y_all, epochs):
@@ -115,17 +105,27 @@ class NumpyTsetlinMachineR:
             clauses_evaluated_C
             & sum_tar_C
             & ~(feedback_type_C ^ literals_F)
-            & ~(literals_F & self.s_inv_l_F.T)
+            & ~(literals_F & self.s_inv_l_F)
         )
 
-        type_I_p = (feedback_type_C & sum_tar_C & self.s_inv_l_F.T) & (
-            (clauses_evaluated_C & ~literals_F) | ~clauses_evaluated_C
+        type_I_p = (
+            feedback_type_C
+            & sum_tar_C
+            & self.s_inv_l_F
+            & ((clauses_evaluated_C & ~literals_F) | ~clauses_evaluated_C)
         )
+
+        # type_I_p = (
+        #     feedback_type_C
+        #     & sum_tar_C
+        #     & self.s_inv_l_F
+        #     & ~(clauses_evaluated_C & literals_F)
+        # )
 
         reward = reward_short.astype(dtype=np.int32)
         punish = type_I_p.astype(dtype=np.int32)
 
-        self.states += reward.T - punish.T
+        self.states += (reward - punish).T
         self.states = np.clip(
             self.states, a_min=-self.number_of_states, a_max=self.number_of_states
         )
