@@ -1,19 +1,20 @@
 # numpyTm
+
 Tsetlin machine implementation with focus on numpy and boolean algebra - proof of concept
 
-
 ## Structure
+
 This repo currently contains two implementations of the original binary classifier tsetlin machine with focus on using as few for loops as possiable, while utelizing numpy. numpyTm is closer to the original paper, while numpyTmReduced is numpyTm, but with some optimizations and some changes to the logic, while still prodicing the same result.
 
 ## Main ideas
 
 ### Using boolean algebra
 
-Since the Tsetlin machine is so closely related to boolean algebra, have I tried to use it as much as possiable. An if else is therefore for example represeted as a multiplexer with the condition choosing the signal used. 
+Since the Tsetlin machine is so closely related to boolean algebra, have I tried to use it as much as possiable. An if else is therefore for example represeted as a multiplexer with the condition choosing the signal used.
 
 ### Random variables
 
-The random variables in this repo is for the most part generated all at once. I.e. random()<1/s can be represented as a precalculated matrix, one for each state in each clause. The same is done with (T-v)/(2T) and so on. By doing this this repo treats the random variables as any other boolean variable.
+The random variables in this repo is for the most part generated all at once. I.e. ```random()<1/s``` can be represented as a precalculated matrix, one for each state in each clause. The same is done with ```(T-v)/(2T)``` and so on. By doing this this repo treats the random variables as any other boolean variable.
 
 ### Reducing feedback table to boolean algebra
 
