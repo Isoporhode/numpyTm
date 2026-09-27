@@ -35,10 +35,11 @@ class NumpyTsetlinMachineR:
         self.feedback_type_y = (
             np.arange(self.number_of_clauses) < self.clause_sign_treshold
         )
+        self.feedback_type_not_y = ~self.feedback_type_y
 
         self.rand_s_generator()
 
-    # probably slow
+    # probably slow, need to find a way to short circuit it (hopefully in numpy).
     def calculate_clauses_output(self, literals):
 
         # tries to find matches where literal and clauses matches. If they do, all values are true for that clause
@@ -84,18 +85,19 @@ class NumpyTsetlinMachineR:
     #     np.roll(self.s_inv_l_F, roll)
 
     def update(self, literals, y):
-        # Since there's a lot of reshaping, the variables, will have a C in them if its pr clause, or F if its the full array
+        # Since there's a lot of reshaping, the variables, will have a C in them if its pr clause, or F if its the full state size
 
         # part 1, Limited to class_sum
         clauses_evaluated_C = self.calculate_clauses_output(literals)
         class_sum = self.class_sum(clauses_evaluated_C)
 
+        # part 2: calculates reward and punish of literal inclusion
         # fixes both (T+v)/(2T) and (T-v)/(2T), as both are dependent on y, and symmetrical
         sum_tar_C = self.sum_tar_select_pos(class_sum) ^ ~y
-        feedback_type_C = (
-            y ^ self.feedback_type_y
-        )  # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0 (can just do a lookup for this one)
-        # self.rand_s_generator()
+
+        # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0 (can just do a lookup for this one)
+        # I think my invert comes from here. Check this later
+        feedback_type_C = y ^ self.feedback_type_y
 
         self.rand_s_generator()
 
@@ -115,6 +117,7 @@ class NumpyTsetlinMachineR:
             & ((clauses_evaluated_C & ~literals_F) | ~clauses_evaluated_C)
         )
 
+        # somehow a bit slower? Needs more testing
         # type_I_p = (
         #     feedback_type_C
         #     & sum_tar_C
