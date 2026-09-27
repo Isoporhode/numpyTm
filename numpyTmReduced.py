@@ -20,7 +20,6 @@ class NumpyTsetlinMachineR:
         self.threshold = threshold
 
         # clause shape er literals en retning, clauses en annen reting
-
         self.state_shape = [number_of_clauses, number_of_features * 2]
         self.state_size = number_of_clauses * number_of_features * 2
 
@@ -60,25 +59,12 @@ class NumpyTsetlinMachineR:
         )  # mulig denne ikke funker, sjekk den
 
     def sum_tar_select_pos(self, group_sum):
-        # not needed?
-        # T = self.threshold
-        # if group_sum < -T:
-        #     group_sum = -T
-        # if group_sum > T:
-        #     group_sum = T
-
         prob_pos = (group_sum + self.threshold) / (2 * self.threshold)
         return prob_pos > np.random.rand(self.number_of_clauses)
-        # not needed?
-        # self.sum_tar_neg_l = np.random.rand(self.number_of_clauses) > prob_pos
 
     def rand_s_generator(self):
-        # can probably just use one of these arrays, and invert it when i have to
         s_inv = 1 / self.s
         self.s_inv_l = (s_inv > np.random.rand(self.state_size)).reshape(
-            self.state_shape
-        )
-        self.s_inv_neg_l = (np.random.rand(self.state_size) > s_inv).reshape(
             self.state_shape
         )
 
@@ -116,7 +102,7 @@ class NumpyTsetlinMachineR:
         )  # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0
         self.rand_s_generator()
 
-        # reshape party
+        # reshape party - See if we can reduce this stuff to a minimum with broadcast
         sum_tar_r = self.C_to_L_reshape(sum_tar)
         type_I_fb_sum_tar = self.C_to_L_reshape(feedback_type & sum_tar)
         clauses_evaluated_r = self.C_to_L_reshape(clauses_evaluated)
@@ -127,7 +113,7 @@ class NumpyTsetlinMachineR:
             & sum_tar_r
             & (
                 (~feedback_type_r & ~literals)
-                | (feedback_type_r & literals & self.s_inv_neg_l)
+                | (feedback_type_r & literals & ~self.s_inv_l)
             )
         )
 
@@ -165,4 +151,6 @@ class NumpyTsetlinMachineR:
             elif output_sum < 0 and bool_y_all[l] == 1:
                 errors += 1
 
-        return 1.0 * errors / bool_y_all.shape[0]
+        return (
+            1.0 * errors / bool_y_all.shape[0]
+        )  # somehow I got the 1 - accuracy out from my model now
