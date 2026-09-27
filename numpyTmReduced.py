@@ -35,9 +35,6 @@ class NumpyTsetlinMachineR:
         self.feedback_type_y = (
             np.arange(self.number_of_clauses) < self.clause_sign_treshold
         )
-        self.feedback_type_not_y = ~self.feedback_type_y
-
-        self.rand_s_generator()
 
     # probably slow, need to find a way to short circuit it (hopefully in numpy).
     def calculate_clauses_output(self, literals):
@@ -153,4 +150,4 @@ class NumpyTsetlinMachineR:
 
         return (
             1.0 * errors / bool_y_all.shape[0]
-        )  # somehow I got the 1 - accuracy out from my model now
+        )  # somehow I got the 1 - accuracy out from my model now, check y ^ feedback thingy
