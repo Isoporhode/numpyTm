@@ -35,6 +35,8 @@ class NumpyTsetlinMachineR:
             np.arange(self.number_of_clauses) < self.clause_sign_treshold
         )
 
+        self.rand_s_generator()
+
     # perhaps we can remove these?
     def C_to_L_reshape(self, arr):
         one_test = np.ones(self.state_shape).T
@@ -47,11 +49,12 @@ class NumpyTsetlinMachineR:
         return combined
 
     # probably slow
-    def calculate_clauses_output(self, literals, clauses):
+    def calculate_clauses_output(self, literals):
+
         # tries to find matches where literal and clauses matches. If they do, all values are true for that clause
-        resloved = literals | ~clauses
         return np.all(
-            resloved,
+            literals
+            | np.signbit(self.states),  # negative number -> exlude, positive -> include
             axis=1,
         )
 
@@ -61,7 +64,7 @@ class NumpyTsetlinMachineR:
 
     def rand_s_generator(self):
         s_inv = 1 / self.s
-        self.s_inv_l = (s_inv > np.random.rand(self.state_size)).reshape(
+        self.s_inv_l_F = (s_inv > np.random.rand(self.state_size)).reshape(
             self.state_shape
         )
 
@@ -87,41 +90,42 @@ class NumpyTsetlinMachineR:
             clauses_evaluated[: self.clause_sign_treshold]
         ) - np.count_nonzero(clauses_evaluated[self.clause_sign_treshold :])
 
+    # def s_inv_roll(self, roll=-307):
+    #     np.roll(self.s_inv_l_F, roll)
+
     def update(self, literals, y):
-        clauses = ~np.signbit(
-            self.states
-        )  # negative number -> exlude, positive -> include
-        clauses_evaluated = self.calculate_clauses_output(literals, clauses)
-        class_sum = self.class_sum(clauses_evaluated)
-        sum_tar = self.sum_tar_select_pos(class_sum) ^ ~y  # her er det en feil lol
-        feedback_type = (
+        # Since there's a lot of reshaping, the variables, will have a C in them if its pr clause, or F if its the full array
+
+        # part 1, Limited to class_sum
+        clauses_evaluated_C = self.calculate_clauses_output(literals)
+        class_sum = self.class_sum(clauses_evaluated_C)
+
+        # fixes both (T+v)/(2T) and (T-v)/(2T), as both are dependent on y, and symmetrical
+        sum_tar_C = self.sum_tar_select_pos(class_sum) ^ ~y
+        feedback_type_C = (
             y ^ self.feedback_type_y
-        )  # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0
+        )  # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0 (can just do a lookup for this one)
+        # self.rand_s_generator()
+
         self.rand_s_generator()
 
-        # a bunch of reshaping - See if we can reduce this stuff to a minimum with broadcast
-        sum_tar_r = self.C_to_L_reshape(sum_tar)
-        type_I_fb_sum_tar = self.C_to_L_reshape(feedback_type & sum_tar)
-        clauses_evaluated_r = self.C_to_L_reshape(clauses_evaluated)
-        feedback_type_r = self.C_to_L_reshape(feedback_type)
+        literals_F = np.tile(literals, (self.number_of_clauses, 1)).T
 
         reward_short = (
-            clauses_evaluated_r
-            & sum_tar_r
-            & (
-                (~feedback_type_r & ~literals)
-                | (feedback_type_r & literals & ~self.s_inv_l)
-            )
+            clauses_evaluated_C
+            & sum_tar_C
+            & ~(feedback_type_C ^ literals_F)
+            & ~(literals_F & self.s_inv_l_F.T)
         )
 
-        type_I_p = (type_I_fb_sum_tar & self.s_inv_l) & (
-            (clauses_evaluated_r & ~literals) | ~clauses_evaluated_r
+        type_I_p = (feedback_type_C & sum_tar_C & self.s_inv_l_F.T) & (
+            (clauses_evaluated_C & ~literals_F) | ~clauses_evaluated_C
         )
 
         reward = reward_short.astype(dtype=np.int32)
         punish = type_I_p.astype(dtype=np.int32)
 
-        self.states += reward - punish
+        self.states += reward.T - punish.T
         self.states = np.clip(
             self.states, a_min=-self.number_of_states, a_max=self.number_of_states
         )
@@ -132,14 +136,10 @@ class NumpyTsetlinMachineR:
         literals_all = np.concat((bool_X_all.T, ~bool_X_all.T)).T
         bool_y_all = y_all > 0
 
-        clauses = ~np.signbit(
-            self.states
-        )  # negative number -> exlude, positive -> include
-
         errors = 0
         for l in range(bool_y_all.shape[0]):
             literals = literals_all[l]
-            clauses_evaluated = self.calculate_clauses_output(literals, clauses)
+            clauses_evaluated = self.calculate_clauses_output(literals)
             output_sum = self.class_sum(clauses_evaluated)
 
             if output_sum >= 0 and bool_y_all[l] == 0:
