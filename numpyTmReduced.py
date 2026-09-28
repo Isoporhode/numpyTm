@@ -90,13 +90,18 @@ class NumpyTsetlinMachineR:
 
         # part 2: calculates reward and punish of literal inclusion
         # fixes both (T+v)/(2T) and (T-v)/(2T), as both are dependent on y, and symmetrical
-        sum_tar_C = self.sum_tar_select_pos(class_sum) ^ ~y
+
+        prob_pos = (class_sum + self.threshold) / (2 * self.threshold)
+        sum_tar_C = (prob_pos > np.random.rand(self.number_of_clauses)) ^ ~y
 
         # [0,0,0 ... 1, 1, 1] if y = 1 [1,1,1 ... 0, 0, 0] if y = 0 (can just do a lookup for this one)
         # I think my invert comes from here. Check this later
         feedback_type_C = y ^ self.feedback_type_y
 
-        self.rand_s_generator()
+        # generate s values
+        s_inv_F = (
+            (1 / self.s > np.random.rand(self.state_size)).reshape(self.state_shape).T
+        )
 
         literals_F = np.tile(literals, (self.number_of_clauses, 1)).T
 
@@ -104,13 +109,13 @@ class NumpyTsetlinMachineR:
             clauses_evaluated_C
             & sum_tar_C
             & ~(feedback_type_C ^ literals_F)
-            & ~(literals_F & self.s_inv_l_F)
+            & ~(literals_F & s_inv_F)
         )
 
         type_I_p = (
             feedback_type_C
             & sum_tar_C
-            & self.s_inv_l_F
+            & s_inv_F
             & ((clauses_evaluated_C & ~literals_F) | ~clauses_evaluated_C)
         )
 
@@ -118,7 +123,7 @@ class NumpyTsetlinMachineR:
         # type_I_p = (
         #     feedback_type_C
         #     & sum_tar_C
-        #     & self.s_inv_l_F
+        #     & s_inv_F
         #     & ~(clauses_evaluated_C & literals_F)
         # )
 
@@ -148,6 +153,4 @@ class NumpyTsetlinMachineR:
             elif output_sum < 0 and bool_y_all[l] == 1:
                 errors += 1
 
-        return (
-            1.0 * errors / bool_y_all.shape[0]
-        )  # somehow I got the 1 - accuracy out from my model now, check y ^ feedback thingy
+        return 1.0 * errors / bool_y_all.shape[0]
