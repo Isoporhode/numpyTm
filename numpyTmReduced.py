@@ -46,16 +46,6 @@ class NumpyTsetlinMachineR:
             axis=1,
         )
 
-    def sum_tar_select_pos(self, group_sum):
-        prob_pos = (group_sum + self.threshold) / (2 * self.threshold)
-        return prob_pos > np.random.rand(self.number_of_clauses)
-
-    def rand_s_generator(self):
-        s_inv = 1 / self.s
-        self.s_inv_l_F = (
-            (s_inv > np.random.rand(self.state_size)).reshape(self.state_shape).T
-        )
-
     def fit(self, X_all, y_all, epochs):
         rng = np.random.default_rng()
         bool_X_all = X_all > 0
@@ -77,9 +67,6 @@ class NumpyTsetlinMachineR:
         return np.count_nonzero(
             clauses_evaluated[: self.clause_sign_treshold]
         ) - np.count_nonzero(clauses_evaluated[self.clause_sign_treshold :])
-
-    # def s_inv_roll(self, roll=-307):
-    #     np.roll(self.s_inv_l_F, roll)
 
     def update(self, literals, y):
         # Since there's a lot of reshaping, the variables, will have a C in them if its pr clause, or F if its the full state size
